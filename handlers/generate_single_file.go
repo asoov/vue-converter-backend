@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"vue-converter-backend/services"
+
+	"github.com/sashabaranov/go-openai"
 )
 
-func GenerateSingle(w http.ResponseWriter, r *http.Request) {
-
-	response := services.GenerateSingleVueTemplate(w, r)
+func GenerateSingle(w http.ResponseWriter, r *http.Request, client *openai.Client) {
+	response := services.GenerateSingleVueTemplate(w, r, client)
 	w.Header().Set("Content-Type", "application/json")
-
 	jsonData, err := json.Marshal(response)
 
 	if err != nil {
@@ -22,5 +22,6 @@ func GenerateSingle(w http.ResponseWriter, r *http.Request) {
 	if writeErr != nil {
 		// If there is an error while writing, log it, or handle it as necessary
 		http.Error(w, "Failed to write JSON to response", http.StatusInternalServerError)
+		return
 	}
 }

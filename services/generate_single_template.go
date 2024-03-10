@@ -6,14 +6,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/models"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request) models.GenerateSingleVueTemplateResponse {
+// OpenAIClient defines the interface for an OpenAI client.
+type OpenAIClient interface {
+	CreateChatCompletion(ctx context.Context, req openai.ChatCompletionRequest) (openai.ChatCompletionResponse, error)
+}
+
+func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client OpenAIClient) models.GenerateSingleVueTemplateResponse {
 	// Only process POST requests
 	if r.Method != "POST" {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
@@ -38,15 +42,17 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request) models.Ge
 
 	neededTokens := helpers.CalculateNeededTokens(requestBody.Content, w)
 
-	result, generationError := generateSingleTemplateResponse(requestBody.Content, neededTokens, w)
+	result, generationError := generateSingleTemplateResponse(requestBody.Content, neededTokens, w, client)
+	if generationError != nil {
+		http.Error(w, "Error generating template", http.StatusInternalServerError)
+		println(generationError.Error())
+		return models.GenerateSingleVueTemplateResponse{}
+	}
 
 	fileContentResult := result.Choices[0].Message.Content
 	tokensConsumed := result.Usage.TotalTokens
 
 	var errorMessage string
-	if generationError != nil {
-		errorMessage = generationError.Error()
-	}
 
 	return models.GenerateSingleVueTemplateResponse{
 		FileName:     requestBody.FileName,
@@ -56,9 +62,7 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request) models.Ge
 	}
 }
 
-func generateSingleTemplateResponse(fileContent string, neededTokens int, w http.ResponseWriter) (openai.ChatCompletionResponse, error) {
-	client := openai.NewClient(os.Getenv("OAI_KEY"))
-
+func generateSingleTemplateResponse(fileContent string, neededTokens int, w http.ResponseWriter, client OpenAIClient) (openai.ChatCompletionResponse, error) {
 	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model: "gpt-3.5-turbo-16k",
 		Messages: []openai.ChatCompletionMessage{
