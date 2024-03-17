@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"vue-converter-backend/helpers"
 	"vue-converter-backend/models"
 
 	"github.com/sashabaranov/go-openai"
@@ -21,6 +20,7 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client Op
 	// Only process POST requests
 	if r.Method != "POST" {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
+		return models.GenerateSingleVueTemplateResponse{}
 	}
 	// Step 2: Read the request body
 	body, err := io.ReadAll(r.Body)
@@ -36,33 +36,34 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client Op
 
 	if parsingError != nil {
 		fmt.Println(parsingError)
-		http.Error(w, "Error parsing request", http.StatusInternalServerError)
+		http.Error(w, "Error parsing request", http.StatusBadRequest)
+		return models.GenerateSingleVueTemplateResponse{}
+	}
+	if requestBody.FileName == "" || requestBody.Content == "" {
+		http.Error(w, "Error parsing request", http.StatusBadRequest)
 		return models.GenerateSingleVueTemplateResponse{}
 	}
 
-	neededTokens := helpers.CalculateNeededTokens(requestBody.Content, w)
-
-	result, generationError := generateSingleTemplateResponse(requestBody.Content, neededTokens, w, client)
+	result, generationError := generateSingleTemplateResponse(requestBody.Content, w, client)
+	var errorMessage string = ""
 	if generationError != nil {
-		http.Error(w, "Error generating template", http.StatusInternalServerError)
-		println(generationError.Error())
-		return models.GenerateSingleVueTemplateResponse{}
+		errorMessage = generationError.Error()
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+		return models.GenerateSingleVueTemplateResponse{ErrorMessage: errorMessage}
 	}
 
 	fileContentResult := result.Choices[0].Message.Content
 	tokensConsumed := result.Usage.TotalTokens
 
-	var errorMessage string
-
 	return models.GenerateSingleVueTemplateResponse{
 		FileName:     requestBody.FileName,
 		Content:      fileContentResult,
 		TokensNeeded: tokensConsumed,
-		ErrorMessage: &errorMessage,
+		ErrorMessage: errorMessage,
 	}
 }
 
-func generateSingleTemplateResponse(fileContent string, neededTokens int, w http.ResponseWriter, client OpenAIClient) (openai.ChatCompletionResponse, error) {
+func generateSingleTemplateResponse(fileContent string, w http.ResponseWriter, client OpenAIClient) (openai.ChatCompletionResponse, error) {
 	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model: "gpt-3.5-turbo-16k",
 		Messages: []openai.ChatCompletionMessage{
