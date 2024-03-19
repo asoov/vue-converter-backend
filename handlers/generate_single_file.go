@@ -8,8 +8,13 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func GenerateSingle(w http.ResponseWriter, r *http.Request, client *openai.Client) {
-	response := services.GenerateSingleVueTemplate(w, r, client)
+func GenerateSingle(
+	w http.ResponseWriter,
+	r *http.Request,
+	client *openai.Client,
+	generateSingleVueTemplate services.GenerateSingleVueTemplateFunc,
+) {
+	response := generateSingleVueTemplate(w, r, client)
 	w.Header().Set("Content-Type", "application/json")
 	jsonData, err := json.Marshal(response)
 

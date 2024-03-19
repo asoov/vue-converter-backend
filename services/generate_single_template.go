@@ -6,17 +6,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"vue-converter-backend/interfaces"
 	"vue-converter-backend/models"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-// OpenAIClient defines the interface for an OpenAI client.
-type OpenAIClient interface {
-	CreateChatCompletion(ctx context.Context, req openai.ChatCompletionRequest) (openai.ChatCompletionResponse, error)
-}
+type GenerateSingleVueTemplateFunc func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse
 
-func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client OpenAIClient) models.GenerateSingleVueTemplateResponse {
+func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
 	// Only process POST requests
 	if r.Method != "POST" {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
@@ -63,7 +61,7 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client Op
 	}
 }
 
-func generateSingleTemplateResponse(fileContent string, w http.ResponseWriter, client OpenAIClient) (openai.ChatCompletionResponse, error) {
+func generateSingleTemplateResponse(fileContent string, w http.ResponseWriter, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
 	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
 		Model: "gpt-3.5-turbo-16k",
 		Messages: []openai.ChatCompletionMessage{
