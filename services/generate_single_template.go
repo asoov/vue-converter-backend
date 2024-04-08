@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"vue-converter-backend/interfaces"
 	"vue-converter-backend/models"
 
@@ -14,6 +15,12 @@ import (
 
 type GenerateSingleVueTemplateFunc func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse
 
+type RegexpCompile struct{}
+
+func (m *RegexpCompile) Compile(str string) (*regexp.Regexp, error) {
+	return regexp.MustCompile(str), nil
+}
+
 func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
 	// Only process POST requests
 	if r.Method != "POST" {
@@ -21,12 +28,12 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client in
 		return models.GenerateSingleVueTemplateResponse{}
 	}
 	// Step 2: Read the request body
-	body, err := io.ReadAll(r.Body)
+	body, readErr := readRequestBody(r.Body, w)
 
-	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+	if readErr != nil {
+		http.Error(w, "Error reading request body", http.StatusBadRequest)
+		return models.GenerateSingleVueTemplateResponse{}
 	}
-	defer r.Body.Close()
 
 	var requestBody models.GenerateSingleVueTemplateRequest
 
@@ -59,6 +66,16 @@ func GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client in
 		TokensNeeded: tokensConsumed,
 		ErrorMessage: errorMessage,
 	}
+}
+
+func readRequestBody(requestBody io.ReadCloser, w http.ResponseWriter) ([]byte, error) {
+	body, err := io.ReadAll(requestBody)
+
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+	}
+	defer requestBody.Close()
+	return body, err
 }
 
 func generateSingleTemplateResponse(fileContent string, w http.ResponseWriter, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {

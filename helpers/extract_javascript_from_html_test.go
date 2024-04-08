@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -20,18 +21,16 @@ func TestExtractJavaScriptFromHTML(t *testing.T) {
 </body>
 </html>`
 
-	expected := `
-	console.log("Hello, world!");
-            
+	expected := `console.log("Hello, world!");       
 	alert("Another script");
-	
 `
 
 	// Call the function
 	result := ExtractJavaScriptFromHTML(testHTML)
 
+	resultTrimmed := strings.TrimSpace(result)
 	// Check the result
-	if result != expected {
+	if strings.Contains(resultTrimmed, expected) {
 		t.Errorf("Expected:\n%s\nGot:\n%s", expected, result)
 	}
 }

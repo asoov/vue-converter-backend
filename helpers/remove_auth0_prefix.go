@@ -1,15 +1,12 @@
 package helpers
 
-import (
-	"net/http"
-	"regexp"
-)
+import "vue-converter-backend/interfaces"
 
-func RemoveAuth0Prefix(w http.ResponseWriter, auth0String string) string {
-	regex, err := regexp.Compile(`^auth0\|`)
+func RemoveAuth0Prefix(auth0String string, compiler interfaces.RegexpCompile) (string, error) {
+	regex, err := compiler.Compile(`^auth0\|`)
 	if err != nil {
-		http.Error(w, "Removing Auth0 prefix failed", http.StatusInternalServerError)
+		return "", err
 	}
 	result := regex.ReplaceAllString(auth0String, "")
-	return result
+	return result, nil
 }

@@ -2,14 +2,30 @@ package handlers
 
 import (
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
+	"vue-converter-backend/adapters"
+	"vue-converter-backend/helpers"
+	"vue-converter-backend/interfaces"
 	"vue-converter-backend/services"
 
 	"github.com/sashabaranov/go-openai"
 )
 
 func GenerateMultiple(w http.ResponseWriter, r *http.Request, client *openai.Client, generateMultipleVueTemplates services.GenerateMultipleVueTemplateFunc) {
-	response := generateMultipleVueTemplates(w, r, client)
+
+	files := helpers.RequestParseFiles(r, w)
+
+	filesConverted := convertToInterfaceSlice(files)
+
+	fileContents, err := helpers.GetTextContentFromFiles(filesConverted, w)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response := generateMultipleVueTemplates(w, r, client, fileContents)
 	w.Header().Set("Content-Type", "application/json")
 	jsonData, err := json.Marshal(response)
 
@@ -24,4 +40,14 @@ func GenerateMultiple(w http.ResponseWriter, r *http.Request, client *openai.Cli
 		http.Error(w, "Failed to write JSON to response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func convertToInterfaceSlice(files []*multipart.FileHeader) []interfaces.FileHeader {
+	var fileHeaderInterfaceSlice []interfaces.FileHeader
+
+	for _, fileHeader := range files {
+		fileHeaderInterfaceSlice = append(fileHeaderInterfaceSlice, adapters.NewFileHeaderAdapter(fileHeader))
+	}
+
+	return fileHeaderInterfaceSlice
 }

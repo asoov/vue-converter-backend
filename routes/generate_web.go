@@ -17,6 +17,7 @@ var generateSingleRoute = func(w http.ResponseWriter, r *http.Request) {
 
 func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
+
 	var generateFunc services.GenerateMultipleVueTemplateFunc = services.GenerateMultipleVueTemplates
 	handlers.GenerateMultiple(w, r, client, generateFunc)
 }
