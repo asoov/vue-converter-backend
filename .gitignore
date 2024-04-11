@@ -1,3 +1,5 @@
 env
 
 **/cover*
+
+.DS_Store
