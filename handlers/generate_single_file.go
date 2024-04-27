@@ -12,9 +12,9 @@ func GenerateSingle(
 	w http.ResponseWriter,
 	r *http.Request,
 	client *openai.Client,
-	generateSingleVueTemplate services.GenerateSingleVueTemplateFunc,
+	service services.GenerateSingleTemplate,
 ) {
-	response := generateSingleVueTemplate(w, r, client)
+	response := service.GenerateSingleVueTemplate(w, r, client)
 	w.Header().Set("Content-Type", "application/json")
 	jsonData, err := json.Marshal(response)
 
