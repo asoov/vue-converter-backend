@@ -20,7 +20,7 @@ func (m *RegexpCompile) Compile(str string) (*regexp.Regexp, error) {
 	return regexp.MustCompile(str), nil
 }
 
-func (s *GenerateSingleTemplate) GenerateSingleVueTemplate(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
+func (s *GenerateSingleTemplate) GenerateSingleVueTemplateFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
 	// Only process POST requests
 	if r.Method != "POST" {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)

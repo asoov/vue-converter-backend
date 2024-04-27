@@ -4,21 +4,21 @@ import (
 	"net/http"
 	"os"
 	"vue-converter-backend/handlers"
-	"vue-converter-backend/services"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-var generateSingleRoute = func(w http.ResponseWriter, r *http.Request) {
+func generateSingleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
-	handlers.GenerateSingle(w, r, client, services.GenerateSingleTemplate{})
+	singleFileHandler := handlers.GenerateSingleFile{}
+	singleFileHandler.GenerateSingle(w, r, client)
 }
 
 func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
+	multipleFiles := handlers.MultipleFiles{}
+	multipleFiles.GenerateMultipleFiles(w, r, client)
 
-	var generateFunc services.GenerateMultipleVueTemplateFunc = services.GenerateMultipleVueTemplates
-	handlers.GenerateMultiple(w, r, client, generateFunc)
 }
 
 func GenerateWebRoutes() {

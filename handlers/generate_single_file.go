@@ -3,18 +3,21 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"vue-converter-backend/services"
+	"vue-converter-backend/interfaces"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-func GenerateSingle(
+type GenerateSingleFile struct {
+	generate interfaces.GenerateSingleVueTemplate
+}
+
+func (s *GenerateSingleFile) GenerateSingle(
 	w http.ResponseWriter,
 	r *http.Request,
 	client *openai.Client,
-	service services.GenerateSingleTemplate,
 ) {
-	response := service.GenerateSingleVueTemplate(w, r, client)
+	response := s.generate.GenerateSingleVueTemplateFunc(w, r, client)
 	w.Header().Set("Content-Type", "application/json")
 	jsonData, err := json.Marshal(response)
 

@@ -7,12 +7,15 @@ import (
 	"vue-converter-backend/adapters"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
-	"vue-converter-backend/services"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-func GenerateMultiple(w http.ResponseWriter, r *http.Request, client *openai.Client, generateMultipleVueTemplates services.GenerateMultipleVueTemplateFunc) {
+type MultipleFiles struct {
+	generate interfaces.GenerateMultipleVueTemplates
+}
+
+func (s *MultipleFiles) GenerateMultipleFiles(w http.ResponseWriter, r *http.Request, client *openai.Client) {
 
 	files := helpers.RequestParseFiles(r, w)
 
@@ -24,8 +27,7 @@ func GenerateMultiple(w http.ResponseWriter, r *http.Request, client *openai.Cli
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	response := generateMultipleVueTemplates(w, r, client, fileContents)
+	response := s.generate.GenerateMultipleVueTemplates(w, r, client, fileContents)
 	w.Header().Set("Content-Type", "application/json")
 	jsonData, err := json.Marshal(response)
 

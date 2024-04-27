@@ -111,7 +111,7 @@ func TestGenerateSingleVueTemplate(t *testing.T) {
 				t.Error("Error creating request")
 			}
 			service := &GenerateSingleTemplate{}
-			result := service.GenerateSingleVueTemplate(rr, req, mockClient)
+			result := service.GenerateSingleVueTemplateFunc(rr, req, mockClient)
 
 			if httpStatus := rr.Code; httpStatus != testCase.ExpectedStatus {
 				t.Errorf("HTTP Status is not as expected. Expected: %d, Got: %d", testCase.ExpectedStatus, httpStatus)

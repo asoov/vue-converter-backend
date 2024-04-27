@@ -6,9 +6,10 @@ import (
 	"vue-converter-backend/models"
 )
 
-type GenerateMultipleVueTemplateFunc func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse
+type GenerateMultipleInterface struct {
+	Services ServicesInterface
+}
 
-func GenerateMultipleVueTemplates(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
-
+func (s *GenerateMultipleInterface) GenerateMultipleVueTemplates(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
 	return models.GenerateMultipleVueTemplateResponse{}
 }
