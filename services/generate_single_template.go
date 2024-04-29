@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,16 +8,15 @@ import (
 	"regexp"
 	"vue-converter-backend/interfaces"
 	"vue-converter-backend/models"
-
-	"github.com/sashabaranov/go-openai"
 )
 
 type RegexpCompile struct{}
-type GenerateSingleTemplate struct{}
 
 func (m *RegexpCompile) Compile(str string) (*regexp.Regexp, error) {
 	return regexp.MustCompile(str), nil
 }
+
+type GenerateSingleTemplate struct{}
 
 func (s *GenerateSingleTemplate) GenerateSingleVueTemplateFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
 	// Only process POST requests
@@ -48,7 +46,9 @@ func (s *GenerateSingleTemplate) GenerateSingleVueTemplateFunc(w http.ResponseWr
 		return models.GenerateSingleVueTemplateResponse{}
 	}
 
-	result, generationError := generateSingleTemplateResponse(requestBody.Content, w, client)
+	chatCompletionRequest := GetChatRequest(requestBody.Content)
+	handler := GenerateSingleTemplateResponse{}
+	result, generationError := handler.GenerateSingleTemplateResponseFunc(chatCompletionRequest, client)
 	var errorMessage string = ""
 	if generationError != nil {
 		errorMessage = generationError.Error()
@@ -75,18 +75,4 @@ func readRequestBody(requestBody io.ReadCloser, w http.ResponseWriter) ([]byte, 
 	}
 	defer requestBody.Close()
 	return body, err
-}
-
-func generateSingleTemplateResponse(fileContent string, w http.ResponseWriter, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
-	resp, err := client.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
-		Model: "gpt-3.5-turbo-16k",
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    "user",
-				Content: GetVueChatCompletion(fileContent),
-			},
-		},
-	})
-
-	return resp, err
 }

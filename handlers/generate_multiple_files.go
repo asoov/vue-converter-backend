@@ -7,33 +7,44 @@ import (
 	"vue-converter-backend/adapters"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
+	"vue-converter-backend/services"
 
 	"github.com/sashabaranov/go-openai"
 )
 
 type MultipleFiles struct {
-	generate interfaces.GenerateMultipleVueTemplates
+	GenerateMultipleVueTemplates services.GenerateMultipleInterface
+	GetTextContentFromFiles      helpers.GetTextContentFromFileInterface
+	RequestParseFiles            helpers.RequestParseFilesInterface
 }
 
-func (s *MultipleFiles) GenerateMultipleFiles(w http.ResponseWriter, r *http.Request, client *openai.Client) {
+func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http.Request, client *openai.Client) {
 
-	files := helpers.RequestParseFiles(r, w)
+	files := s.RequestParseFiles.RequestParseFilesFunc(r, w)
+
+	if len(files) == 0 {
+		http.Error(w, "No files uploaded", http.StatusBadRequest)
+		return
+	}
 
 	filesConverted := convertToInterfaceSlice(files)
 
-	fileContents, err := helpers.GetTextContentFromFiles(filesConverted, w)
+	fileContents, extractErr := s.GetTextContentFromFiles.GetTextContentFromFiles(filesConverted, w)
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if extractErr != nil {
+		http.Error(w, extractErr.Error(), http.StatusBadRequest)
 		return
 	}
-	response := s.generate.GenerateMultipleVueTemplates(w, r, client, fileContents)
-	w.Header().Set("Content-Type", "application/json")
-	jsonData, err := json.Marshal(response)
 
-	if err != nil {
+	response := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonData, marshalErr := json.Marshal(response)
+
+	if marshalErr != nil {
 		// If an error occurs during JSON marshaling, send an error to the client
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, marshalErr.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, writeErr := w.Write(jsonData)

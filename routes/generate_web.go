@@ -10,14 +10,14 @@ import (
 
 func generateSingleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
-	singleFileHandler := handlers.GenerateSingleFile{}
-	singleFileHandler.GenerateSingle(w, r, client)
+	generateSingleFile := handlers.GenerateSingleFile{}
+	generateSingleFile.GenerateSingleFileFunc(w, r, client)
 }
 
 func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
-	multipleFiles := handlers.MultipleFiles{}
-	multipleFiles.GenerateMultipleFiles(w, r, client)
+	generateMultipleFiles := handlers.MultipleFiles{}
+	generateMultipleFiles.GenerateMultipleFilesFunc(w, r, client)
 
 }
 

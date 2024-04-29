@@ -15,6 +15,10 @@ func (f *FileHeaderAdapter) Open() (multipart.File, error) {
 	return f.FileHeader.Open()
 }
 
+type GetTextContentFromFileInterface interface {
+	GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error)
+}
+
 func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error) {
 	var fileContents []string
 
@@ -22,14 +26,12 @@ func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWrite
 		// Open the file
 		file, err := fileHeader.Open()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return nil, err
 		}
 
 		// Read the file content
 		fileBytes, err := io.ReadAll(file)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return nil, err
 
 		}

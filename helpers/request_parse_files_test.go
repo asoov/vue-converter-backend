@@ -24,7 +24,8 @@ func TestRequestParseFiles(t *testing.T) {
 
 				w := httptest.NewRecorder()
 
-				RequestParseFiles(request, w)
+				requestParseFiles := RequestParseFiles{}
+				requestParseFiles.RequestParseFilesFunc(request, w)
 
 				if w.Result().StatusCode != http.StatusBadRequest {
 					t.Errorf("Theres an error %v", w.Result().StatusCode)
@@ -50,7 +51,8 @@ func TestRequestParseFiles(t *testing.T) {
 
 				w := httptest.NewRecorder()
 
-				result := RequestParseFiles(request, w)
+				requestParseFiles := RequestParseFiles{}
+				result := requestParseFiles.RequestParseFilesFunc(request, w)
 
 				if w.Result().StatusCode != 200 {
 					t.Errorf("Status code %d", w.Result().StatusCode)
@@ -94,7 +96,8 @@ func TestRequestParseFiles(t *testing.T) {
 
 				w := httptest.NewRecorder()
 
-				result := RequestParseFiles(request, w)
+				requestParseFiles := RequestParseFiles{}
+				result := requestParseFiles.RequestParseFilesFunc(request, w)
 
 				if w.Result().StatusCode != http.StatusBadRequest {
 					t.Errorf("Status code %d", w.Result().StatusCode)

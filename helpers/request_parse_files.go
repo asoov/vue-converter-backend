@@ -5,7 +5,13 @@ import (
 	"net/http"
 )
 
-func RequestParseFiles(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader {
+type RequestParseFilesInterface interface {
+	RequestParseFilesFunc(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader
+}
+
+type RequestParseFiles struct{}
+
+func (s *RequestParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader {
 	parseErr := r.ParseMultipartForm(10 << 20)
 
 	if parseErr != nil {
@@ -17,7 +23,6 @@ func RequestParseFiles(r *http.Request, w http.ResponseWriter) []*multipart.File
 	files := r.MultipartForm.File["files"]
 
 	if len(files) == 0 {
-		http.Error(w, "No files uploaded", http.StatusBadRequest)
 		return nil
 	}
 
