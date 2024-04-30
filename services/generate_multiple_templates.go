@@ -14,21 +14,16 @@ type GenerateMultipleVueTemplates struct {
 	generateSingleResponse GenerateSingleTemplateResponseInterface
 }
 
-type Files struct {
-	fileName    string
-	fileContent string
-}
-
 type RequestsWithFileNames struct {
 	fileName string
 	request  openai.ChatCompletionRequest
 }
 
-func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []Files) (*models.GenerateMultipleVueTemplateResponse, error) {
+func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (*models.GenerateMultipleVueTemplateResponse, error) {
 	requests := []RequestsWithFileNames{}
-	for _, fileContent := range files {
-		chatRequest := GetChatRequest(fileContent.fileContent)
-		requests = append(requests, RequestsWithFileNames{fileName: fileContent.fileName, request: chatRequest})
+	for _, file := range files {
+		chatRequest := GetChatRequest(file.Content)
+		requests = append(requests, RequestsWithFileNames{fileName: file.Name, request: chatRequest})
 	}
 
 	if len(requests) == 0 {

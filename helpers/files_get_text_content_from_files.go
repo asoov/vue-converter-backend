@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"vue-converter-backend/interfaces"
+	"vue-converter-backend/models"
 )
 
 type FileHeaderAdapter struct {
@@ -16,13 +17,14 @@ func (f *FileHeaderAdapter) Open() (multipart.File, error) {
 }
 
 type GetTextContentFromFileInterface interface {
-	GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error)
+	GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
 
-func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error) {
-	var fileContents []string
+func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
+	var fileContents []models.VueFile
 
-	for _, fileHeader := range files {
+	for _, fileHeaderInterface := range files {
+		fileHeader := fileHeaderInterface.(*FileHeaderAdapter)
 		// Open the file
 		file, err := fileHeader.Open()
 		if err != nil {
@@ -36,7 +38,8 @@ func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWrite
 
 		}
 		file.Close()
-		fileContents = append(fileContents, string(fileBytes))
+		newFile := models.VueFile{Name: fileHeader.FileHeader.Filename, Content: string(fileBytes)}
+		fileContents = append(fileContents, newFile)
 	}
 
 	return fileContents, nil

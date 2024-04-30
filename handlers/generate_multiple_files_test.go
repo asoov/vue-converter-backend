@@ -16,7 +16,7 @@ import (
 )
 
 type MockGenerateMultiple struct {
-	execute func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse
+	execute func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse
 }
 
 type MockParseFiles struct {
@@ -24,10 +24,10 @@ type MockParseFiles struct {
 }
 
 type MockGetTextContent struct {
-	execGetTextContent func(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error)
+	execGetTextContent func(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
 
-func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
+func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 	if s.execute != nil {
 		println("EXECUTION")
 		result := s.execute(w, r, client, filesTextContent)
@@ -43,7 +43,7 @@ func (s *MockParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseW
 	handler := helpers.RequestParseFiles{}
 	return handler.RequestParseFilesFunc(r, w)
 }
-func (s *MockGetTextContent) GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error) {
+func (s *MockGetTextContent) GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
 	if s.execGetTextContent != nil {
 		return s.execGetTextContent(files, w)
 	}
@@ -80,12 +80,12 @@ func TestGenerateMultipleFiles(t *testing.T) {
 		{
 			name: "Case 2: When request goes through, header should be set, correct status code returned, and contetn should be correct",
 			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
-				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
-					return models.GenerateMultipleVueTemplateResponse{
+				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
+					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{
 						FileName:     "NameName",
 						Content:      "This is the content",
 						TokensNeeded: 666,
-					}
+					}}
 				}
 			},
 			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
@@ -101,18 +101,18 @@ func TestGenerateMultipleFiles(t *testing.T) {
 		{
 			name: "Case 3: Create error when json marshaling fails",
 			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
-				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
+				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 					// TODO: Create a response that will break json.Marshal()
-					return models.GenerateMultipleVueTemplateResponse{Content: ""}
+					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{Content: ""}}
 				}
 			},
 		},
 		{
 			name: "Case 4: Write json response data.",
 			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
-				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []string) models.GenerateMultipleVueTemplateResponse {
+				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 					// TODO: Create a response that will break json.Marshal()
-					return models.GenerateMultipleVueTemplateResponse{Content: ""}
+					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{Content: ""}}
 				}
 			},
 		},
@@ -127,7 +127,7 @@ func TestGenerateMultipleFiles(t *testing.T) {
 		{
 			name: "Case 6: Error when extraction fails",
 			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
-				d.execGetTextContent = func(files []interfaces.FileHeader, w http.ResponseWriter) ([]string, error) {
+				d.execGetTextContent = func(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
 					return nil, errors.New("Error occured")
 				}
 			},

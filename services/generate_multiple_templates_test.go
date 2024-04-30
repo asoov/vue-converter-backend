@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 	"vue-converter-backend/interfaces"
+	"vue-converter-backend/models"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -26,13 +27,13 @@ func (s *GenerateSingleResponseStruct) GenerateSingleTemplateResponse(request op
 func TestGenerateMultipleTemplates(t *testing.T) {
 	type TestCase struct {
 		name  string
-		files []Files
+		files []models.VueFile
 		mock  func(*GenerateSingleResponseStruct)
 	}
 
 	testCases := []TestCase{{
 		name:  "It should not call the OpenAI API if the file content is empty",
-		files: []Files{{fileName: "test.vue", fileContent: ""}},
+		files: []models.VueFile{{Name: "test.vue", Content: ""}},
 		mock:  func(*GenerateSingleResponseStruct) {},
 	}}
 
