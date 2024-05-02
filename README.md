@@ -1,1 +1,1 @@
-a little playground for using golang
+WIP Project to port vue converter to Golang. Intention is to teach myself Golang. 
