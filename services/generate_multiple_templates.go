@@ -19,7 +19,7 @@ type RequestsWithFileNames struct {
 	request  openai.ChatCompletionRequest
 }
 
-func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (*models.GenerateMultipleVueTemplateResponse, error) {
+func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
 	requests := []RequestsWithFileNames{}
 	for _, file := range files {
 		chatRequest := GetChatRequest(file.Content)
@@ -38,5 +38,5 @@ func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.R
 		results = append(results, mappedResult)
 	}
 
-	return &results, nil
+	return results, nil
 }

@@ -11,40 +11,79 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-type MockOAI struct{}
+type MockOAI struct {
+}
 
-type GenerateSingleResponseStruct struct{}
+type MockGenerateSingleResponse struct {
+	mockReturn func(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error)
+}
 
 func (s *MockOAI) CreateChatCompletion(ctx context.Context, req openai.ChatCompletionRequest) (openai.ChatCompletionResponse, error) {
 	return openai.NewClient(os.Getenv("OAI_KEY")).CreateChatCompletion(ctx, req)
 }
 
-func (s *GenerateSingleResponseStruct) GenerateSingleTemplateResponse(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
-	println("DRIN")
-	return client.CreateChatCompletion(context.Background(), request)
+func (s *MockGenerateSingleResponse) GenerateSingleTemplateResponse(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
+	return s.mockReturn(request, client)
+
 }
 
 func TestGenerateMultipleTemplates(t *testing.T) {
 	type TestCase struct {
-		name  string
-		files []models.VueFile
-		mock  func(*GenerateSingleResponseStruct)
+		name                       string
+		files                      []models.VueFile
+		generateSingleResponseMock func(*MockGenerateSingleResponse)
+		expected                   models.GenerateMultipleVueTemplateResponse
+		expectedErrorMessage       string
 	}
 
 	testCases := []TestCase{{
-		name:  "It should not call the OpenAI API if the file content is empty",
-		files: []models.VueFile{{Name: "test.vue", Content: ""}},
-		mock:  func(*GenerateSingleResponseStruct) {},
+		name:  "It should return an error if files are empty",
+		files: []models.VueFile{},
+		generateSingleResponseMock: func(m *MockGenerateSingleResponse) {
+			m.mockReturn = func(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
+				return openai.ChatCompletionResponse{}, nil
+			}
+		},
+		expected:             nil,
+		expectedErrorMessage: "no files uploaded",
+	}, {
+		name:  "It should return an array of chat completion responses",
+		files: []models.VueFile{{Name: "Name", Content: "This is the content"}},
+		generateSingleResponseMock: func(m *MockGenerateSingleResponse) {
+			m.mockReturn = func(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
+				return openai.ChatCompletionResponse{
+						Choices: []openai.ChatCompletionChoice{
+							openai.ChatCompletionChoice{
+								Message: openai.ChatCompletionMessage{Content: "Hallo"},
+							},
+						},
+						Usage: openai.Usage{TotalTokens: 2},
+					},
+					nil
+			}
+		},
+		expected:             models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{FileName: "Name", Content: "Hallo", TokensNeeded: 2}},
+		expectedErrorMessage: "",
 	}}
 
 	for _, tc := range testCases {
-		tc.name = "Test case 1"
-
-		handler := GenerateMultipleVueTemplates{generateSingleResponse: &GenerateSingleResponseStruct{}}
-
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/generate-web/multiple", nil)
-		mock := &MockOAI{}
-		handler.GenerateMultipleVueTemplatesFunc(rr, req, mock, tc.files)
+		openAiMock := &MockOAI{}
+		generateSingleResponseMock := &MockGenerateSingleResponse{}
+		tc.generateSingleResponseMock(generateSingleResponseMock)
+
+		handler := GenerateMultipleVueTemplates{generateSingleResponse: generateSingleResponseMock}
+		result, error := handler.GenerateMultipleVueTemplatesFunc(rr, req, openAiMock, tc.files)
+
+		if error == nil {
+			if result[0] != tc.expected[0] {
+				t.Errorf("Result is not what was expected, expected: %v got: %v", tc.expected, result)
+			}
+		} else {
+			if error.Error() != tc.expectedErrorMessage {
+				t.Error("Error not what was expected")
+			}
+		}
 	}
 }
