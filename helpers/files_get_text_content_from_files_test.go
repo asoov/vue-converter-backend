@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 	"vue-converter-backend/interfaces"
+	"vue-converter-backend/models"
 )
 
 // Constructor for the mock file.
@@ -21,10 +22,15 @@ func NewMockMultipartFile(content []byte) *interfaces.MockMultipartFile {
 
 type MockFileOpener struct {
 	OpenFunc func() (multipart.File, error)
+	FileName string
 }
 
 func (m *MockFileOpener) Open() (multipart.File, error) {
 	return m.OpenFunc()
+}
+
+func (m *MockFileOpener) Filename() string {
+	return m.FileName
 }
 func TestGetTextContentFromFiles(t *testing.T) {
 	type TestParameters struct {
@@ -33,7 +39,7 @@ func TestGetTextContentFromFiles(t *testing.T) {
 	}
 
 	type TestExpectedResult struct {
-		fileContents []string
+		fileContents []models.VueFile
 		err          error
 	}
 
@@ -50,6 +56,7 @@ func TestGetTextContentFromFiles(t *testing.T) {
 				files: []interfaces.FileHeader{
 					&MockFileOpener{
 						OpenFunc: func() (multipart.File, error) { return NewMockMultipartFile([]byte("")), errors.New("error") },
+						FileName: "Di",
 					},
 				},
 				w: httptest.NewRecorder()},
@@ -64,11 +71,12 @@ func TestGetTextContentFromFiles(t *testing.T) {
 				files: []interfaces.FileHeader{
 					&MockFileOpener{
 						OpenFunc: func() (multipart.File, error) { return NewMockMultipartFile([]byte("hallo")), nil },
+						FileName: "Diese",
 					},
 				},
 				w: httptest.NewRecorder()},
 			expected: TestExpectedResult{
-				fileContents: []string{"hallo"},
+				fileContents: []models.VueFile{{Name: "Diese", Content: "hallo"}},
 				err:          nil,
 			},
 		},
@@ -82,7 +90,7 @@ func TestGetTextContentFromFiles(t *testing.T) {
 			if err != nil && err.Error() != tc.expected.err.Error() {
 				t.Errorf("%s: Expected error to be %v but got %v", tc.description, tc.expected.err, err)
 			} else if !reflect.DeepEqual(fileContents, tc.expected.fileContents) {
-				t.Errorf("Expected fileContents to be equal: %v, got: %v", tc.expected.fileContents, fileContents)
+				t.Errorf("%s: Expected fileContents to be equal: %v, got: %v", tc.description, tc.expected.fileContents, fileContents)
 			}
 		})
 	}

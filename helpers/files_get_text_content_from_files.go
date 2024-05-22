@@ -16,6 +16,10 @@ func (f *FileHeaderAdapter) Open() (multipart.File, error) {
 	return f.FileHeader.Open()
 }
 
+func (f *FileHeaderAdapter) Filename() string {
+	return f.FileHeader.Filename
+}
+
 type GetTextContentFromFileInterface interface {
 	GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
@@ -24,7 +28,8 @@ func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWrite
 	var fileContents []models.VueFile
 
 	for _, fileHeaderInterface := range files {
-		fileHeader := fileHeaderInterface.(*FileHeaderAdapter)
+		fileHeader := fileHeaderInterface
+
 		// Open the file
 		file, err := fileHeader.Open()
 		if err != nil {
@@ -38,7 +43,8 @@ func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWrite
 
 		}
 		file.Close()
-		newFile := models.VueFile{Name: fileHeader.FileHeader.Filename, Content: string(fileBytes)}
+		fileName := fileHeader.Filename()
+		newFile := models.VueFile{Name: fileName, Content: string(fileBytes)}
 		fileContents = append(fileContents, newFile)
 	}
 

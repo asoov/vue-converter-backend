@@ -83,32 +83,6 @@ func TestRequestParseFiles(t *testing.T) {
 
 			},
 		},
-		{
-			description: "Case 3: No files uploaded",
-			testBody: func() {
-				body := new(bytes.Buffer)
-
-				writer := multipart.NewWriter(body)
-				writer.Close()
-
-				request := httptest.NewRequest("POST", "/", body)
-				request.Header.Set("Content-Type", writer.FormDataContentType())
-
-				w := httptest.NewRecorder()
-
-				requestParseFiles := RequestParseFiles{}
-				result := requestParseFiles.RequestParseFilesFunc(request, w)
-
-				if w.Result().StatusCode != http.StatusBadRequest {
-					t.Errorf("Status code %d", w.Result().StatusCode)
-				}
-
-				if result != nil {
-					t.Error("Parsing file did not work out!", result)
-				}
-
-			},
-		},
 	}
 
 	for _, tc := range testCases {

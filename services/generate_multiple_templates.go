@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"net/http"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
@@ -20,23 +19,49 @@ type RequestsWithFileNames struct {
 }
 
 func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
+	requests := createRequestsWithFileNames(files)
+
+	const maxConcurrentRequests = 10
+
+	resultsChannel := make(chan models.GenerateSingleVueTemplateResponse, len(requests))
+
+	processRequestsConcurrently(requests, resultsChannel, s.generateSingleResponse.GenerateSingleTemplateResponse, client)
+
+	results := collectResults(len(requests), resultsChannel)
+	return results, nil
+}
+
+func createRequestsWithFileNames(files []models.VueFile) []RequestsWithFileNames {
 	requests := []RequestsWithFileNames{}
 	for _, file := range files {
 		chatRequest := GetChatRequest(file.Content)
 		requests = append(requests, RequestsWithFileNames{fileName: file.Name, request: chatRequest})
 	}
+	return requests
+}
 
-	if len(requests) == 0 {
-		return nil, errors.New("no files uploaded")
-	}
-
-	var results models.GenerateMultipleVueTemplateResponse
+func processRequestsConcurrently(requests []RequestsWithFileNames, resultsChannel chan models.GenerateSingleVueTemplateResponse, generateSingleTemplateResponse func(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error), client interfaces.OpenAIClient) {
+	// Limit the number of concurrent requests to 10
+	semaphore := make(chan struct{}, 10)
 
 	for _, request := range requests {
-		chatCompletionResult, err := s.generateSingleResponse.GenerateSingleTemplateResponse(request.request, client)
-		mappedResult := helpers.MapOpenAiResponse(request.fileName, chatCompletionResult, err)
-		results = append(results, mappedResult)
-	}
+		go func(req RequestsWithFileNames) {
+			semaphore <- struct{}{}
 
-	return results, nil
+			chatCompletionResult, err := generateSingleTemplateResponse(req.request, client)
+			mappedResult := helpers.MapOpenAiResponse(req.fileName, chatCompletionResult, err)
+			resultsChannel <- mappedResult
+
+			<-semaphore
+		}(request)
+	}
+}
+
+func collectResults(length int, resultsChannel chan models.GenerateSingleVueTemplateResponse) models.GenerateMultipleVueTemplateResponse {
+	var results models.GenerateMultipleVueTemplateResponse
+	for i := 0; i < length; i++ {
+		result := <-resultsChannel
+		results = append(results, result)
+	}
+	return results
 }

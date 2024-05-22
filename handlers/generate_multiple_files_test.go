@@ -134,11 +134,13 @@ func TestGenerateMultipleFiles(t *testing.T) {
 			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
 			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
 				if r.Code != http.StatusBadRequest {
-					t.Error("Wrong code")
+					t.Errorf("Wrong code! expected: %v got: %v", http.StatusBadRequest, r.Code)
 				}
 
-				if r.Body.String() != "Error occured" {
-					t.Error("Wrong error")
+				expectedErrString := "Error occured"
+				returnedStringTrimmed := strings.TrimSpace(r.Body.String())
+				if returnedStringTrimmed != expectedErrString {
+					t.Errorf("Wrong error! expected: %s got: %s", expectedErrString, strings.TrimSpace(r.Body.String()))
 				}
 			},
 		},
