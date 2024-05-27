@@ -85,7 +85,8 @@ func TestGetTextContentFromFiles(t *testing.T) {
 	// Iterate through test cases if needed
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			fileContents, err := GetTextContentFromFiles(tc.parameters.files, tc.parameters.w)
+			getTextContentFromFiles := GetTextContentFromFiles{}
+			fileContents, err := getTextContentFromFiles.GetTextContentFromFilesFunc(tc.parameters.files, tc.parameters.w)
 
 			if err != nil && err.Error() != tc.expected.err.Error() {
 				t.Errorf("%s: Expected error to be %v but got %v", tc.description, tc.expected.err, err)

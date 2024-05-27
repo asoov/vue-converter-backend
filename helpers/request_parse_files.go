@@ -13,7 +13,6 @@ type RequestParseFiles struct{}
 
 func (s *RequestParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader {
 	parseErr := r.ParseMultipartForm(10 << 20)
-
 	if parseErr != nil {
 		http.Error(w, parseErr.Error(), http.StatusBadRequest)
 		println(parseErr.Error())

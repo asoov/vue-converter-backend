@@ -21,10 +21,12 @@ func (f *FileHeaderAdapter) Filename() string {
 }
 
 type GetTextContentFromFileInterface interface {
-	GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
+	GetTextContentFromFilesFunc(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
 
-func GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
+type GetTextContentFromFiles struct{}
+
+func (*GetTextContentFromFiles) GetTextContentFromFilesFunc(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
 	var fileContents []models.VueFile
 
 	for _, fileHeaderInterface := range files {

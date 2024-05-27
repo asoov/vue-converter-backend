@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"net/http"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
@@ -10,7 +11,7 @@ import (
 )
 
 type GenerateMultipleVueTemplates struct {
-	generateSingleResponse GenerateSingleTemplateResponseInterface
+	generateSingleResponse GenerateSingleStruct // Injecting the struct directly to avoid having to define every dependency in the main file. It's still possible to provide a different implementation for a different use case.
 }
 
 type RequestsWithFileNames struct {
@@ -18,8 +19,29 @@ type RequestsWithFileNames struct {
 	request  openai.ChatCompletionRequest
 }
 
+// Not so nice solution I came along to escape dependency injection hell
+// Use a default implementation when no implementation is provided so not EVERY dependency has to be injected in the main file
+// If you ahve to inject every dependency in the main file, shit is gonna get extremely bloated and this way you keep flexibility for the cost of some verboseness
+// Would be nice to come along another solution for this case
+
+type GenerateSingleStruct struct {
+	generateForTest func(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error)
+}
+
+func (s *GenerateSingleStruct) GenerateSingleTemplateResponse(request openai.ChatCompletionRequest, client interfaces.OpenAIClient) (openai.ChatCompletionResponse, error) {
+	if s.generateForTest != nil {
+		return s.generateForTest(request, client)
+	}
+	generateSingleFunc := GenerateSingleTemplateResponse{}
+	return generateSingleFunc.GenerateSingleTemplateResponseFunc(request, client)
+}
+
 func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
 	requests := createRequestsWithFileNames(files)
+
+	if len(requests) == 0 {
+		return models.GenerateMultipleVueTemplateResponse{}, errors.New("no files uploaded")
+	}
 
 	const maxConcurrentRequests = 10
 
@@ -47,6 +69,7 @@ func processRequestsConcurrently(requests []RequestsWithFileNames, resultsChanne
 	for _, request := range requests {
 		go func(req RequestsWithFileNames) {
 			semaphore <- struct{}{}
+			println("Processing request for file: ", req.fileName)
 
 			chatCompletionResult, err := generateSingleTemplateResponse(req.request, client)
 			mappedResult := helpers.MapOpenAiResponse(req.fileName, chatCompletionResult, err)

@@ -27,13 +27,13 @@ type MockGetTextContent struct {
 	execGetTextContent func(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
 
-func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, filesTextContent []models.VueFile) models.GenerateMultipleVueTemplateResponse {
+func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
 	if s.execute != nil {
 		println("EXECUTION")
-		result := s.execute(w, r, client, filesTextContent)
-		return result
+		result := s.execute(w, r, client, files)
+		return result, nil
 	}
-	return models.GenerateMultipleVueTemplateResponse{}
+	return models.GenerateMultipleVueTemplateResponse{}, nil
 }
 
 func (s *MockParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader {
@@ -43,11 +43,12 @@ func (s *MockParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseW
 	handler := helpers.RequestParseFiles{}
 	return handler.RequestParseFilesFunc(r, w)
 }
-func (s *MockGetTextContent) GetTextContentFromFiles(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
+func (s *MockGetTextContent) GetTextContentFromFilesFunc(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
 	if s.execGetTextContent != nil {
 		return s.execGetTextContent(files, w)
 	}
-	return helpers.GetTextContentFromFiles(files, w)
+	getTextContentFromFiles := helpers.GetTextContentFromFiles{}
+	return getTextContentFromFiles.GetTextContentFromFilesFunc(files, w)
 }
 
 type TestCase struct {
