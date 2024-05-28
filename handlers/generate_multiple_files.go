@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"vue-converter-backend/adapters"
@@ -34,6 +35,10 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 		http.Error(w, extractErr.Error(), http.StatusBadRequest)
 		return
 	}
+	calculateNeededTokens := helpers.CalculateNeededTokens{Tokenizer: &interfaces.TokenizerCalToken{}}
+	tokensNeeded, err := calculateNeededTokens.CalculateNeededTokensFunc(fileContents)
+
+	fmt.Println(tokensNeeded)
 
 	response, err := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
 	if err != nil {

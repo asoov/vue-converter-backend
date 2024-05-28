@@ -22,7 +22,8 @@ func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 	generateMultipleFiles := handlers.MultipleFiles{
 		RequestParseFiles:            &helpers.RequestParseFiles{},
 		GetTextContentFromFiles:      &helpers.GetTextContentFromFiles{},
-		GenerateMultipleVueTemplates: &services.GenerateMultipleVueTemplates{}}
+		GenerateMultipleVueTemplates: &services.GenerateMultipleVueTemplates{},
+	}
 	generateMultipleFiles.GenerateMultipleFilesFunc(w, r, client)
 
 }
