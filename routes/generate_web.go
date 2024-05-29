@@ -13,8 +13,7 @@ import (
 
 func generateSingleRoute(w http.ResponseWriter, r *http.Request) {
 	client := openai.NewClient(os.Getenv("OAI_KEY"))
-
-	generateSingleFile := handlers.GenerateSingleFile{}
+	generateSingleFile := handlers.GenerateSingleFile{GenerateSingleFile: &services.GenerateSingleTemplate{}}
 	generateSingleFile.GenerateSingleFileFunc(w, r, client)
 }
 

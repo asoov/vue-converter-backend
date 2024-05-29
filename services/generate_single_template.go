@@ -16,6 +16,10 @@ func (m *RegexpCompile) Compile(str string) (*regexp.Regexp, error) {
 	return regexp.MustCompile(str), nil
 }
 
+type GenerateSingleVueTemplateInterface interface {
+	GenerateSingleVueTemplateFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse
+}
+
 type GenerateSingleTemplate struct{}
 
 func (s *GenerateSingleTemplate) GenerateSingleVueTemplateFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
