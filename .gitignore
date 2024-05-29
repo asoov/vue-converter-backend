@@ -3,3 +3,6 @@ env
 **/cover*
 
 .DS_Store
+
+# don't include any debug related files
+__debug*
