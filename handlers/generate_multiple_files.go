@@ -46,6 +46,7 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 	}
 
 	customer, customerErr := s.GetCustomer.GetCustomerFunc(customerId)
+
 	if customerErr != nil {
 		http.Error(w, "Could not retrieve customer", http.StatusBadRequest)
 		return
@@ -64,7 +65,13 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 		return
 	}
 
-	s.deductTokensFromCustomer(customer, tokensUsed)
+	deductionError := s.deductTokensFromCustomer(customer, tokensUsed)
+
+	if deductionError != nil {
+		errorMessage := "Could not deduct tokens. Reason: " + deductionError.Error()
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 

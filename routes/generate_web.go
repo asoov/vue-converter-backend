@@ -25,6 +25,7 @@ func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 		GetTextContentFromFiles:      &helpers.GetTextContentFromFiles{},
 		GenerateMultipleVueTemplates: &services.GenerateMultipleVueTemplates{},
 		GetCustomer:                  &dynamo.GetCustomer{},
+		DeductTokensFromCustomer:     &dynamo.DeductTokenBalanceForCustomers{},
 	}
 	generateMultipleFiles.GenerateMultipleFilesFunc(w, r, client)
 

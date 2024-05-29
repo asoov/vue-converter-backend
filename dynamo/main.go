@@ -54,14 +54,14 @@ func (f *TopUpTokenBalanceForCustomer) TopUpTokenBalanceForCustomerFunc(customer
 	sess := session.Must(session.NewSession())
 	db := dynamo.New(sess, &aws.Config{Region: aws.String("eu-central-1")})
 	table := db.Table("Customers")
-	error := table.Update("ID", customer.Id).Add("AiCredits", tokenAmount).Run()
+	error := table.Update("Id", customer.Id).Add("AiCredits", tokenAmount).Run()
 	return error
 }
 
-func (f *DeductTokenBalanceForCustomers) DeductTokenBalanceForCustomersFunc(customer models.Customer, tokenAmount int) error {
+func (f *DeductTokenBalanceForCustomers) DeductTokensForCustomerFunc(customer models.Customer, tokenAmount int) error {
 	sess := session.Must(session.NewSession())
 	db := dynamo.New(sess, &aws.Config{Region: aws.String("eu-central-1")})
 	table := db.Table("Customers")
-	error := table.Update("ID", customer.Id).Add("AiCredits", -tokenAmount).Run()
+	error := table.Update("Id", customer.Id).Add("AiCredits", -tokenAmount).Run()
 	return error
 }
