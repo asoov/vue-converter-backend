@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"vue-converter-backend/adapters"
+	"vue-converter-backend/cloudwatch"
 	"vue-converter-backend/dynamo"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
@@ -23,7 +24,6 @@ type MultipleFiles struct {
 }
 
 func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http.Request, client *openai.Client) {
-
 	filesConverted, convertErr := s.parseAndConvertFiles(r, w)
 
 	if convertErr != nil {
@@ -62,6 +62,7 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 	response, tokensUsed, err := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		cloudwatch.Log(err.Error())
 		return
 	}
 
@@ -69,6 +70,7 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 
 	if deductionError != nil {
 		errorMessage := "Could not deduct tokens. Reason: " + deductionError.Error()
+		cloudwatch.Log(errorMessage)
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}

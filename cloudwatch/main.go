@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 )
 
-func LogToCloudWatch(logMessage string) {
+func Log(logMessage string) {
 	sess := session.Must(session.NewSession())
 
 	// Create a CloudWatch Logs client
