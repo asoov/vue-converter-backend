@@ -25,92 +25,57 @@ type MultipleFiles struct {
 
 func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http.Request, client *openai.Client) {
 	filesConverted, convertErr := s.parseAndConvertFiles(r, w)
-
 	if convertErr != nil {
-		http.Error(w, convertErr.Error(), http.StatusBadRequest)
+		httpError(w, convertErr, http.StatusBadRequest)
 		return
 	}
 
 	fileContents, extractErr := s.GetTextContentFromFiles.GetTextContentFromFilesFunc(filesConverted, w)
-
 	if extractErr != nil {
-		http.Error(w, extractErr.Error(), http.StatusBadRequest)
+		httpError(w, extractErr, http.StatusBadRequest)
 		return
 	}
 
-	customerId := r.Header.Get("customer_id")
-
-	if customerId == "" {
-		http.Error(w, "No customer id provided in header", http.StatusBadRequest)
+	customerId, customerIdErr := getCustomerId(r)
+	if customerIdErr != nil {
+		httpError(w, customerIdErr, http.StatusBadRequest)
 		return
 	}
 
 	customer, customerErr := s.GetCustomer.GetCustomerFunc(customerId)
-
 	if customerErr != nil {
-		http.Error(w, "Could not retrieve customer", http.StatusBadRequest)
+		httpError(w, errors.New("could not retrieve customer"), http.StatusBadRequest)
 		return
 	}
 
-	ok := s.checkTokenBalance(fileContents, customer.AiCredits)
-
-	if !ok {
-		http.Error(w, "Not enough tokens", http.StatusBadRequest)
+	if !s.checkTokenBalance(fileContents, customer.AiCredits) {
+		httpError(w, errors.New("not enough tokens"), http.StatusBadRequest)
 		return
 	}
 
 	response, tokensUsed, err := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		cloudwatch.Log(err.Error())
+		httpError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	deductionError := s.deductTokensFromCustomer(customer, tokensUsed)
-
-	if deductionError != nil {
-		errorMessage := "Could not deduct tokens. Reason: " + deductionError.Error()
-		cloudwatch.Log(errorMessage)
-		http.Error(w, errorMessage, http.StatusInternalServerError)
+	if err := s.deductTokensFromCustomer(customer, tokensUsed); err != nil {
+		logAndRespondError(w, "could not deduct tokens", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	jsonData, marshalErr := json.Marshal(response)
-
-	if marshalErr != nil {
-		// If an error occurs during JSON marshaling, send an error to the client
-		http.Error(w, marshalErr.Error(), http.StatusInternalServerError)
-		return
+	if err := writeJSONResponse(w, response); err != nil {
+		httpError(w, err, http.StatusInternalServerError)
 	}
-	_, writeErr := w.Write(jsonData)
-	if writeErr != nil {
-		// If there is an error while writing, log it, or handle it as necessary
-		http.Error(w, "Failed to write JSON to response", http.StatusInternalServerError)
-		return
-	}
-}
-
-func convertToInterfaceSlice(files []*multipart.FileHeader) []interfaces.FileHeader {
-	var fileHeaderInterfaceSlice []interfaces.FileHeader
-
-	for _, fileHeader := range files {
-		fileHeaderInterfaceSlice = append(fileHeaderInterfaceSlice, adapters.NewFileHeaderAdapter(fileHeader))
-	}
-
-	return fileHeaderInterfaceSlice
 }
 
 func (s *MultipleFiles) parseAndConvertFiles(r *http.Request, w http.ResponseWriter) ([]interfaces.FileHeader, error) {
 	files := s.RequestParseFiles.RequestParseFilesFunc(r, w)
-
 	if len(files) == 0 {
 		return nil, errors.New("no files uploaded")
 	}
-
-	filesConverted := convertToInterfaceSlice(files)
-	return filesConverted, nil
+	return convertToInterfaceSlice(files), nil
 }
 
 func (s *MultipleFiles) deductTokensFromCustomer(customer models.Customer, tokenAmount int) error {
@@ -118,20 +83,46 @@ func (s *MultipleFiles) deductTokensFromCustomer(customer models.Customer, token
 }
 
 func (s *MultipleFiles) checkTokenBalance(fileContents []models.VueFile, customerAiCreditBalance int) bool {
-
 	calculateNeededTokens := helpers.CalculateNeededTokens{Tokenizer: &interfaces.TokenizerCalToken{}}
 	tokensNeeded, err := calculateNeededTokens.CalculateNeededTokensFunc(fileContents)
-	if err != nil {
+	if err != nil || customerAiCreditBalance < tokensNeeded {
 		return false
 	}
-
-	if customerAiCreditBalance < tokensNeeded {
-		return false
-	} else {
-		return true
-	}
+	return true
 }
 
-func (s *MultipleFiles) GetCustomerFunc(id string) (models.Customer, error) {
-	return s.GetCustomer.GetCustomerFunc(id)
+func getCustomerId(r *http.Request) (string, error) {
+	customerId := r.Header.Get("customer_id")
+	if customerId == "" {
+		return "", errors.New("no customer id provided in header")
+	}
+	return customerId, nil
+}
+
+func writeJSONResponse(w http.ResponseWriter, data interface{}) error {
+	w.Header().Set("Content-Type", "application/json")
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	_, writeErr := w.Write(jsonData)
+	return writeErr
+}
+
+func httpError(w http.ResponseWriter, err error, statusCode int) {
+	http.Error(w, err.Error(), statusCode)
+}
+
+func logAndRespondError(w http.ResponseWriter, message string, err error) {
+	errorMessage := message + ". Reason: " + err.Error()
+	cloudwatch.Log(errorMessage)
+	http.Error(w, errorMessage, http.StatusInternalServerError)
+}
+
+func convertToInterfaceSlice(files []*multipart.FileHeader) []interfaces.FileHeader {
+	fileHeaderInterfaceSlice := make([]interfaces.FileHeader, len(files))
+	for i, fileHeader := range files {
+		fileHeaderInterfaceSlice[i] = adapters.NewFileHeaderAdapter(fileHeader)
+	}
+	return fileHeaderInterfaceSlice
 }

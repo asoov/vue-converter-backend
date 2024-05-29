@@ -173,7 +173,7 @@ func TestGenerateMultipleFiles(t *testing.T) {
 					t.Errorf("Wrong code! expected: %v got: %v", http.StatusBadRequest, r.Code)
 				}
 
-				expectedErrString := strings.TrimSpace("Could not retrieve customer")
+				expectedErrString := strings.TrimSpace("could not retrieve customer")
 				returnedStringTrimmed := strings.TrimSpace(r.Body.String())
 				if returnedStringTrimmed != expectedErrString {
 					t.Errorf("Wrong error! expected: %s got: %s", expectedErrString, returnedStringTrimmed)
@@ -193,7 +193,7 @@ func TestGenerateMultipleFiles(t *testing.T) {
 					t.Errorf("Wrong code! expected: %v got: %v", http.StatusBadRequest, r.Code)
 				}
 
-				expectedErrString := strings.TrimSpace("Not enough tokens")
+				expectedErrString := strings.TrimSpace("not enough tokens")
 				returnedStringTrimmed := strings.TrimSpace(r.Body.String())
 
 				if returnedStringTrimmed != expectedErrString {
