@@ -36,11 +36,11 @@ func (s *GenerateSingleStruct) GenerateSingleTemplateResponse(request openai.Cha
 	return generateSingleFunc.GenerateSingleTemplateResponseFunc(request, client)
 }
 
-func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
+func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, int, error) {
 	requests := createRequestsWithFileNames(files)
 
 	if len(requests) == 0 {
-		return models.GenerateMultipleVueTemplateResponse{}, errors.New("no files uploaded")
+		return models.GenerateMultipleVueTemplateResponse{}, 0, errors.New("no files uploaded")
 	}
 
 	const maxConcurrentRequests = 10
@@ -49,8 +49,8 @@ func (s *GenerateMultipleVueTemplates) GenerateMultipleVueTemplatesFunc(w http.R
 
 	processRequestsConcurrently(requests, resultsChannel, s.generateSingleResponse.GenerateSingleTemplateResponse, client)
 
-	results := collectResults(len(requests), resultsChannel)
-	return results, nil
+	results, tokensUsed := collectResults(len(requests), resultsChannel)
+	return results, tokensUsed, nil
 }
 
 func createRequestsWithFileNames(files []models.VueFile) []RequestsWithFileNames {
@@ -80,11 +80,13 @@ func processRequestsConcurrently(requests []RequestsWithFileNames, resultsChanne
 	}
 }
 
-func collectResults(length int, resultsChannel chan models.GenerateSingleVueTemplateResponse) models.GenerateMultipleVueTemplateResponse {
+func collectResults(length int, resultsChannel chan models.GenerateSingleVueTemplateResponse) (models.GenerateMultipleVueTemplateResponse, int) {
 	var results models.GenerateMultipleVueTemplateResponse
+	tokensUsed := 0
 	for i := 0; i < length; i++ {
 		result := <-resultsChannel
 		results = append(results, result)
+		tokensUsed += result.TokensNeeded
 	}
-	return results
+	return results, tokensUsed
 }

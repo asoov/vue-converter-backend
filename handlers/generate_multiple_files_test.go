@@ -32,12 +32,14 @@ type MockGetCustomer struct {
 	getCustomerReplacement func(id string) (models.Customer, error)
 }
 
-func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
+type MockDeductTokensForCustomer struct{}
+
+func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, int, error) {
 	if s.execute != nil {
 		result := s.execute(w, r, client, files)
-		return result, nil
+		return result, 0, nil
 	}
-	return models.GenerateMultipleVueTemplateResponse{}, nil
+	return models.GenerateMultipleVueTemplateResponse{}, 0, nil
 }
 
 func (s *MockParseFiles) RequestParseFilesFunc(r *http.Request, w http.ResponseWriter) []*multipart.FileHeader {
@@ -62,6 +64,11 @@ func (s *MockGetCustomer) GetCustomerFunc(id string) (models.Customer, error) {
 	getCustomerFunc := dynamo.GetCustomer{}
 
 	return getCustomerFunc.GetCustomerFunc(id)
+}
+
+func (s *MockDeductTokensForCustomer) DeductTokensForCustomerFunc(customer models.Customer, tokenAmount int) error {
+	return nil
+
 }
 
 type TestCase struct {
@@ -222,6 +229,7 @@ func TestGenerateMultipleFiles(t *testing.T) {
 		mockParseFiles := MockParseFiles{}
 		mockGetTextContent := MockGetTextContent{}
 		mockGetCustomer := MockGetCustomer{}
+		mockDeductTokensForCustomer := MockDeductTokensForCustomer{}
 
 		tc.mock(&mockGenerateMultiple, &mockGetTextContent, &mockParseFiles, &mockGetCustomer)
 
@@ -230,6 +238,7 @@ func TestGenerateMultipleFiles(t *testing.T) {
 			GetTextContentFromFiles:      &mockGetTextContent,
 			RequestParseFiles:            &mockParseFiles,
 			GetCustomer:                  &mockGetCustomer,
+			DeductTokensFromCustomer:     &mockDeductTokensForCustomer,
 		}
 
 		rr := httptest.NewRecorder()

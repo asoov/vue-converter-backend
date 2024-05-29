@@ -74,7 +74,7 @@ func TestGenerateMultipleTemplates(t *testing.T) {
 		tc.generateSingleResponseMock(generateSingleResponseMock)
 
 		handler := GenerateMultipleVueTemplates{generateSingleResponse: GenerateSingleStruct{generateForTest: generateSingleResponseMock.GenerateSingleTemplateResponse}}
-		result, error := handler.GenerateMultipleVueTemplatesFunc(rr, req, openAiMock, tc.files)
+		result, _, error := handler.GenerateMultipleVueTemplatesFunc(rr, req, openAiMock, tc.files)
 
 		if error == nil {
 			if result[0] != tc.expected[0] {

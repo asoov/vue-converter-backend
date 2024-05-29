@@ -6,5 +6,5 @@ import (
 )
 
 type GenerateMultipleVueTemplates interface {
-	GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error)
+	GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, int, error)
 }

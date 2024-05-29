@@ -19,6 +19,7 @@ type MultipleFiles struct {
 	GetTextContentFromFiles      helpers.GetTextContentFromFileInterface
 	RequestParseFiles            helpers.RequestParseFilesInterface
 	GetCustomer                  dynamo.GetCustomerInterface
+	DeductTokensFromCustomer     dynamo.DeductTokensForCustomerInterface
 }
 
 func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http.Request, client *openai.Client) {
@@ -57,11 +58,13 @@ func (s *MultipleFiles) GenerateMultipleFilesFunc(w http.ResponseWriter, r *http
 		return
 	}
 
-	response, err := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
+	response, tokensUsed, err := s.GenerateMultipleVueTemplates.GenerateMultipleVueTemplatesFunc(w, r, client, fileContents)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	s.deductTokensFromCustomer(customer, tokensUsed)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -99,6 +102,10 @@ func (s *MultipleFiles) parseAndConvertFiles(r *http.Request, w http.ResponseWri
 
 	filesConverted := convertToInterfaceSlice(files)
 	return filesConverted, nil
+}
+
+func (s *MultipleFiles) deductTokensFromCustomer(customer models.Customer, tokenAmount int) error {
+	return s.DeductTokensFromCustomer.DeductTokensForCustomerFunc(customer, tokenAmount)
 }
 
 func (s *MultipleFiles) checkTokenBalance(fileContents []models.VueFile, customerAiCreditBalance int) bool {
