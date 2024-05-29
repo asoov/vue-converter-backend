@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"os"
+	"vue-converter-backend/dynamo"
 	"vue-converter-backend/handlers"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/services"
@@ -23,6 +24,7 @@ func generateMultipleRoute(w http.ResponseWriter, r *http.Request) {
 		RequestParseFiles:            &helpers.RequestParseFiles{},
 		GetTextContentFromFiles:      &helpers.GetTextContentFromFiles{},
 		GenerateMultipleVueTemplates: &services.GenerateMultipleVueTemplates{},
+		GetCustomer:                  &dynamo.GetCustomer{},
 	}
 	generateMultipleFiles.GenerateMultipleFilesFunc(w, r, client)
 

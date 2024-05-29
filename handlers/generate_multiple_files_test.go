@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"vue-converter-backend/dynamo"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
 	"vue-converter-backend/models"
@@ -27,9 +28,12 @@ type MockGetTextContent struct {
 	execGetTextContent func(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error)
 }
 
+type MockGetCustomer struct {
+	getCustomerReplacement func(id string) (models.Customer, error)
+}
+
 func (s *MockGenerateMultiple) GenerateMultipleVueTemplatesFunc(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) (models.GenerateMultipleVueTemplateResponse, error) {
 	if s.execute != nil {
-		println("EXECUTION")
 		result := s.execute(w, r, client, files)
 		return result, nil
 	}
@@ -51,9 +55,18 @@ func (s *MockGetTextContent) GetTextContentFromFilesFunc(files []interfaces.File
 	return getTextContentFromFiles.GetTextContentFromFilesFunc(files, w)
 }
 
+func (s *MockGetCustomer) GetCustomerFunc(id string) (models.Customer, error) {
+	if s.getCustomerReplacement != nil {
+		return s.getCustomerReplacement(id)
+	}
+	getCustomerFunc := dynamo.GetCustomer{}
+
+	return getCustomerFunc.GetCustomerFunc(id)
+}
+
 type TestCase struct {
 	name       string
-	mock       func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles)
+	mock       func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer)
 	givenFiles []File
 	assertion  func(r *httptest.ResponseRecorder, t *testing.T)
 }
@@ -67,20 +80,23 @@ func TestGenerateMultipleFiles(t *testing.T) {
 	testCases := []TestCase{
 		{
 			name:       "Case 1: If request contains no files, return a 400 status code",
-			mock:       func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {},
+			mock:       func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {},
 			givenFiles: []File{},
 			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
 				if r.Code != http.StatusBadRequest {
 					t.Error("Not a 400 error code")
 				}
-				if strings.TrimSpace(r.Body.String()) != "No files uploaded" {
+				if strings.TrimSpace(r.Body.String()) != "no files uploaded" {
 					t.Errorf("Wrong message returned %s", r.Body.String())
 				}
 			},
 		},
 		{
 			name: "Case 2: When request goes through, header should be set, correct status code returned, and contetn should be correct",
-			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
+				g.getCustomerReplacement = func(id string) (models.Customer, error) {
+					return models.Customer{FirstName: "Anton", AiCredits: 120000}, nil
+				}
 				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{
 						FileName:     "NameName",
@@ -91,17 +107,17 @@ func TestGenerateMultipleFiles(t *testing.T) {
 			},
 			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
 			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
-				if r.Header().Get("Content-Type") != "application/json" {
-					t.Error("Doenst have application/json header")
-				}
 				if r.Code != http.StatusOK {
 					t.Errorf("Doesnt have correct status code, expected: %v, is: %v", http.StatusOK, r.Code)
+				}
+				if r.Header().Get("Content-Type") != "application/json" {
+					t.Error("Doenst have application/json header")
 				}
 			},
 		},
 		{
 			name: "Case 3: Create error when json marshaling fails",
-			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
 				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 					// TODO: Create a response that will break json.Marshal()
 					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{Content: ""}}
@@ -110,24 +126,16 @@ func TestGenerateMultipleFiles(t *testing.T) {
 		},
 		{
 			name: "Case 4: Write json response data.",
-			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
 				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
 					// TODO: Create a response that will break json.Marshal()
 					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{Content: ""}}
 				}
 			},
 		},
-		// {
-		// 	name: "If error during writing occurs create the correct error",
-		// 	mock: func(s *MockGenerateMultiple) {
-		// 		s.execute = func(w http.ResponseWriter, r *http.Request, client *openai.Client, filesTextContent []string) {
-		// 			w.WriteHeader(http.StatusInternalServerError)
-		// 		}
-		// 	},
-		// },
 		{
-			name: "Case 6: Error when extraction fails",
-			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles) {
+			name: "Case 5: Error when extraction fails",
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
 				d.execGetTextContent = func(files []interfaces.FileHeader, w http.ResponseWriter) ([]models.VueFile, error) {
 					return nil, errors.New("Error occured")
 				}
@@ -145,19 +153,83 @@ func TestGenerateMultipleFiles(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Case 6: Error when getting customer fails",
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
+				g.getCustomerReplacement = func(id string) (models.Customer, error) {
+					return models.Customer{}, errors.New("Error occured")
+				}
+			},
+			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
+			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
+				if r.Code != http.StatusBadRequest {
+					t.Errorf("Wrong code! expected: %v got: %v", http.StatusBadRequest, r.Code)
+				}
+
+				expectedErrString := strings.TrimSpace("Could not retrieve customer")
+				returnedStringTrimmed := strings.TrimSpace(r.Body.String())
+				if returnedStringTrimmed != expectedErrString {
+					t.Errorf("Wrong error! expected: %s got: %s", expectedErrString, returnedStringTrimmed)
+				}
+			},
+		},
+		{
+			name: "Case 7: User doesnt have enough tokens",
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
+				g.getCustomerReplacement = func(id string) (models.Customer, error) {
+					return models.Customer{AiCredits: 0}, nil
+				}
+			},
+			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
+			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
+				if r.Code != http.StatusBadRequest {
+					t.Errorf("Wrong code! expected: %v got: %v", http.StatusBadRequest, r.Code)
+				}
+
+				expectedErrString := strings.TrimSpace("Not enough tokens")
+				returnedStringTrimmed := strings.TrimSpace(r.Body.String())
+
+				if returnedStringTrimmed != expectedErrString {
+					t.Errorf("Wrong error! expected: %s got: %s", expectedErrString, returnedStringTrimmed)
+				}
+			},
+		},
+		{
+			name: "Case 8: User has enough tokens",
+			mock: func(s *MockGenerateMultiple, d *MockGetTextContent, f *MockParseFiles, g *MockGetCustomer) {
+				g.getCustomerReplacement = func(id string) (models.Customer, error) {
+					return models.Customer{AiCredits: 99999}, nil
+				}
+				s.execute = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient, files []models.VueFile) models.GenerateMultipleVueTemplateResponse {
+					return models.GenerateMultipleVueTemplateResponse{models.GenerateSingleVueTemplateResponse{
+						FileName:     "NameName",
+						Content:      "This is the content",
+						TokensNeeded: 666,
+					}}
+				}
+			},
+			givenFiles: []File{{filename: "fileName1", content: "Diese"}, {filename: "fileName2", content: "Das ist ein Test"}},
+			assertion: func(r *httptest.ResponseRecorder, t *testing.T) {
+				if r.Code != http.StatusOK {
+					t.Errorf("Wrong code! expected: %v got: %v", http.StatusOK, r.Code)
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		mockGenerateMultiple := MockGenerateMultiple{}
 		mockParseFiles := MockParseFiles{}
 		mockGetTextContent := MockGetTextContent{}
+		mockGetCustomer := MockGetCustomer{}
 
-		tc.mock(&mockGenerateMultiple, &mockGetTextContent, &mockParseFiles)
+		tc.mock(&mockGenerateMultiple, &mockGetTextContent, &mockParseFiles, &mockGetCustomer)
 
 		multipleFiles := MultipleFiles{
 			GenerateMultipleVueTemplates: &mockGenerateMultiple,
 			GetTextContentFromFiles:      &mockGetTextContent,
 			RequestParseFiles:            &mockParseFiles,
+			GetCustomer:                  &mockGetCustomer,
 		}
 
 		rr := httptest.NewRecorder()
@@ -198,6 +270,7 @@ func createMultifileUploadRequest(files []File) (*http.Request, error) {
 	req := httptest.NewRequest(http.MethodPost, "/", body)
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("customer_id", "1234")
 
 	return req, nil
 }

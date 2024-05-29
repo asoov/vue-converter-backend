@@ -45,7 +45,7 @@ func (f *GetCustomer) GetCustomerFunc(id string) (models.Customer, error) {
 	db := dynamo.New(sess, &aws.Config{Region: aws.String("eu-central-1")})
 	table := db.Table("Customers")
 	var customer models.Customer
-	error := table.Get("ID", id).One(customer)
+	error := table.Get("Id", id).One(&customer)
 
 	return customer, error
 }
