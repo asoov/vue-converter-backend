@@ -77,7 +77,7 @@ func TestGenerateSingleFile(t *testing.T) {
 				}
 				g.generateSingleResponseReplacement = func(w http.ResponseWriter, r *http.Request, client interfaces.OpenAIClient) models.GenerateSingleVueTemplateResponse {
 					// Create invalid UTF8 to make JSON marshalling fail
-					return models.GenerateSingleVueTemplateResponse{Content: }
+					return models.GenerateSingleVueTemplateResponse{}
 				}
 			},
 			expectedErrorMessage: "json: error calling MarshalJSON for type json.RawMessage: invalid character '\\xff' looking for beginning of value\n",

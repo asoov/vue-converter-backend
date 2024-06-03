@@ -10,6 +10,7 @@ require (
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/guregu/dynamo v1.23.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pandodao/tokenizer-go v0.2.0 // indirect

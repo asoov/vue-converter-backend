@@ -5,12 +5,15 @@ import (
 	"errors"
 	"mime/multipart"
 	"net/http"
+	"time"
 	"vue-converter-backend/adapters"
 	"vue-converter-backend/cloudwatch"
 	"vue-converter-backend/dynamo"
 	"vue-converter-backend/helpers"
 	"vue-converter-backend/interfaces"
 	"vue-converter-backend/models"
+	s3Utils "vue-converter-backend/s3"
+	"vue-converter-backend/services"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -89,6 +92,22 @@ func (s *MultipleFiles) checkTokenBalance(fileContents []models.VueFile, custome
 		return false
 	}
 	return true
+}
+
+func createZipFileAndUploadToS3(files models.GenerateMultipleVueTemplateResponse, bucketName string) error {
+	generateZipFile := services.CreateZipFile{}
+
+	zipFile, err := generateZipFile.CreateZipFileFunc(files)
+
+	if err != nil {
+		return err
+	}
+
+	S3Service := s3Utils.S3Service{}
+	fileName := time.Now().Format("2006-01-02T15:04:05") + ".zip"
+	uploadErr := S3Service.UploadToBucket(bucketName, fileName, zipFile)
+
+	return uploadErr
 }
 
 func getCustomerId(r *http.Request) (string, error) {
